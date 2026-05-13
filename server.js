@@ -118,10 +118,4 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
-  console.log("Acesse: http://localhost:3000");
-  console.log("VULNERABILIDADES IMPLANTADAS:");
-  console.log("- SQL Injection em /api/login");
-  console.log("- SQL Injection em /api/messages");
-  console.log("- XSS no chat via WebSocket");
-  console.log("- Senha hardcoded para flag");
 });
