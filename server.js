@@ -1,7 +1,7 @@
 const express = require("express");
 const http = require("http");
 const socketIo = require("socket.io");
-const mysql = require("mysql2");
+const { Client } = require("pg");
 const bodyParser = require("body-parser");
 const path = require("path");
 
@@ -9,16 +9,16 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-// Middleware
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(express.static("public"));
 
-const db = mysql.createConnection({
+const db = new Client({
   host: "localhost",
-  user: "root",
+  user: "postgres",
   password: "password",
   database: "chat_app",
+  port: 5432
 });
 
 db.connect((err) => {
@@ -26,7 +26,7 @@ db.connect((err) => {
     console.error("Erro conectando ao banco:", err);
     return;
   }
-  console.log("Conectado ao MySQL");
+  console.log("Conectado ao PostgreSQL");
 });
 
 app.get("/", (req, res) => {
@@ -39,13 +39,13 @@ app.post("/api/login", (req, res) => {
   const query = `SELECT * FROM users WHERE username = '${username}' AND password = '${password}'`;
 
   console.log("Query executada:", query);
-  db.query(query, (err, results) => {
+  db.query(query, (err, result) => {
     if (err) {
       return res.status(500).json({ error: "Erro no banco de dados" });
     }
 
-    if (results.length > 0) {
-      res.json({ success: true, user: results[0] });
+    if (result.rows && result.rows.length > 0) {
+      res.json({ success: true, user: result.rows[0] });
     } else {
       res.json({ success: false, message: "Credenciais inválidas" });
     }
@@ -65,11 +65,11 @@ app.get("/api/messages", (req, res) => {
 
   console.log("Query mensagens:", query);
 
-  db.query(query, (err, results) => {
+  db.query(query, (err, result) => {
     if (err) {
       return res.status(500).json({ error: "Erro no banco de dados" });
     }
-    res.json(results);
+    res.json(result.rows);
   });
 });
 
@@ -79,11 +79,11 @@ app.post("/api/getFlag", (req, res) => {
   if (secret === "admin123") {
     const query = `SELECT * FROM flags WHERE flag_name = 'main_flag'`;
 
-    db.query(query, (err, results) => {
-      if (err || results.length === 0) {
+    db.query(query, (err, result) => {
+      if (err || !result.rows || result.rows.length === 0) {
         return res.status(500).json({ error: "Erro ao buscar flag" });
       }
-      res.json({ flag: results[0].flag_value });
+      res.json({ flag: result.rows[0].flag_value });
     });
   } else {
     res.status(401).json({ error: "Acesso negado" });
