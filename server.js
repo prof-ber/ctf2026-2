@@ -9,7 +9,7 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-// Armazenamento em memória para as sessões (Substitui o express-session)
+// Armazenamento em memória para as sessões
 const activeSessions = {};
 
 // Middleware de CSP - Trava a execução de scripts maliciosos (XSS)
@@ -25,12 +25,12 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(express.static("public"));
 
-// Conexão com o banco
+// Conexão com o banco (Valores fixos devido à limitação do servidor)
 const db = new Client({
-  host: process.env.DB_HOST || "localhost",
-  user: process.env.DB_USER || "postgres",
-  password: process.env.DB_PASSWORD || "password",
-  database: process.env.DB_NAME || "chat_app",
+  host: "localhost",
+  user: "postgres",
+  password: "password",
+  database: "chat_app",
   port: 5432
 });
 
@@ -58,11 +58,9 @@ app.post("/api/login", (req, res) => {
     }
 
     if (result.rows && result.rows.length > 0) {
-      // Gera um token simples e salva na memória
       const token = Math.random().toString(36).substring(2, 15);
       activeSessions[token] = result.rows[0].id;
       
-      // Envia o token como cookie HTTP-Only para o navegador do usuário
       res.setHeader("Set-Cookie", `sessionId=${token}; HttpOnly; Path=/`);
       
       res.json({ success: true, user: result.rows[0] });
@@ -96,18 +94,17 @@ app.get("/api/messages", (req, res) => {
 
 // RECUPERAÇÃO DE FLAG - Validação manual do cookie de sessão
 app.post("/api/getFlag", (req, res) => {
-  // Lê os cookies enviados pelo navegador
   const cookies = req.headers.cookie || "";
   const match = cookies.match(/sessionId=([^;]+)/);
   const token = match ? match[1] : null;
 
-  // Verifica se o token existe e é válido
   if (!token || !activeSessions[token]) {
     return res.status(401).json({ error: "Acesso negado. Faça login primeiro." });
   }
 
   const { secret } = req.body;
-  const adminSecret = process.env.ADMIN_SECRET || "senha_do_admin_modificada";
+  // Credencial fixada no código (Limitação de ambiente de laboratório)
+  const adminSecret = "senha_segura_lab";
 
   if (secret === adminSecret) {
     const query = `SELECT * FROM flags WHERE flag_name = 'main_flag'`;
@@ -149,7 +146,8 @@ io.on("connection", (socket) => {
   });
 });
 
-const PORT = process.env.PORT || 3000;
+// Porta fixa
+const PORT = 3000;
 server.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
