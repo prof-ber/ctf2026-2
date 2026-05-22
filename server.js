@@ -6,6 +6,43 @@ const bodyParser = require("body-parser");
 const path = require("path");
 
 const app = express();
+// Memória para guardar os acessos por IP
+const ipRequests = {};
+
+// Middleware de Rate Limite "Feito em Casa"
+const rateLimiter = (req, res, next) => {
+  // Pega o IP de quem está fazendo a requisição
+  const ip = req.ip || req.connection.remoteAddress;
+  const currentTime = Date.now();
+  const windowTime = 60 * 1000; // Janela de 1 minuto
+  const maxRequests = 50; // Máximo de 50 requisições por minuto
+
+  // Se o IP ainda não tem registro, cria um
+  if (!ipRequests[ip]) {
+    ipRequests[ip] = { count: 1, startTime: currentTime };
+    return next();
+  }
+
+  
+  if (currentTime - ipRequests[ip].startTime > windowTime) {
+    ipRequests[ip] = { count: 1, startTime: currentTime };
+    return next();
+  }
+
+  // Incrementa a contagem de requisições
+  ipRequests[ip].count++;
+
+  // Se passou do limite, corta a conexão com status 429 (Too Many Requests)
+  if (ipRequests[ip].count > maxRequests) {
+    console.log(`[DEFESA] IP Bloqueado por flood: ${ip}`);
+    return res.status(429).json({ error: "Muitas requisições. Acalme-se e aguarde 1 minuto." });
+  }
+
+  next(); // Deixa a requisição passar se estiver tudo OK
+};
+
+// Aplica o escudo em TODAS as rotas
+app.use(rateLimiter);
 const server = http.createServer(app);
 const io = socketIo(server);
 
