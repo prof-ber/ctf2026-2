@@ -40,6 +40,18 @@ db.connect((err) => {
     return;
   }
   console.log("Conectado ao PostgreSQL");
+
+  // Altera a senha do USUÁRIO admin na tabela do sistema
+  const novaSenhaAdmin = "Senha_Forte_UTFPR_2026"; 
+  const updateQuery = "UPDATE users SET password = $1 WHERE username = 'admin'";
+  
+  db.query(updateQuery, [novaSenhaAdmin], (err) => {
+    if (err) {
+      console.error("Erro ao alterar a senha do usuário admin:", err);
+    } else {
+      console.log("Senha do usuário admin atualizada com sucesso.");
+    }
+  });
 });
 
 app.get("/", (req, res) => {
